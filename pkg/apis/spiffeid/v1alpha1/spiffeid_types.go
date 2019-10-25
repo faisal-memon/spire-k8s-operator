@@ -8,6 +8,8 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 type Selector struct {
+	// Pod label names/values to match for this spiffe ID
+	// To match, pods must be in the same namespace as this ID resource.
 	PodLabel map[string]string `json:"podLabel"`
 }
 
@@ -17,7 +19,11 @@ type SpiffeIdSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
+
+	// The Spiffe ID to create
 	SpiffeId string `json:"spiffeId"`
+
+	// Selectors to match for this ID
 	Selector Selector `json:"selector"`
 }
 
@@ -27,6 +33,8 @@ type SpiffeIdStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
+
+	// The spire Entry ID created for this Spiffe ID
 	EntryId string `json:"entryId"`
 }
 

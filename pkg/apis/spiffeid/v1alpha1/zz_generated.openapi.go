@@ -70,14 +70,15 @@ func schema_pkg_apis_spiffeid_v1alpha1_SpiffeIdSpec(ref common.ReferenceCallback
 				Properties: map[string]spec.Schema{
 					"spiffeId": {
 						SchemaProps: spec.SchemaProps{
-							Description: "INSERT ADDITIONAL SPEC FIELDS - desired state of cluster Important: Run \"operator-sdk generate k8s\" to regenerate code after modifying this file Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html",
+							Description: "The Spiffe ID to create",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"selector": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/transferwise/spire-k8s-operator/pkg/apis/spiffeid/v1alpha1.Selector"),
+							Description: "Selectors to match for this ID",
+							Ref:         ref("github.com/transferwise/spire-k8s-operator/pkg/apis/spiffeid/v1alpha1.Selector"),
 						},
 					},
 				},
@@ -98,7 +99,7 @@ func schema_pkg_apis_spiffeid_v1alpha1_SpiffeIdStatus(ref common.ReferenceCallba
 				Properties: map[string]spec.Schema{
 					"entryId": {
 						SchemaProps: spec.SchemaProps{
-							Description: "INSERT ADDITIONAL STATUS FIELD - define observed state of cluster Important: Run \"operator-sdk generate k8s\" to regenerate code after modifying this file Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html",
+							Description: "The spire Entry ID created for this Spiffe ID",
 							Type:        []string{"string"},
 							Format:      "",
 						},

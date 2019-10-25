@@ -32,19 +32,19 @@ spec:
           description: SpiffeIdSpec defines the desired state of SpiffeId
           properties:
             selector:
+              description: Selectors to match for this ID
               properties:
                 podLabel:
                   additionalProperties:
                     type: string
+                  description: Pod label names/values to match for this spiffe ID
+                    To match, pods must be in the same namespace as this ID resource.
                   type: object
               required:
               - podLabel
               type: object
             spiffeId:
-              description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-                Important: Run "operator-sdk generate k8s" to regenerate code after
-                modifying this file Add custom validation using kubebuilder tags:
-                https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html'
+              description: The Spiffe ID to create
               type: string
           required:
           - selector
@@ -54,10 +54,7 @@ spec:
           description: SpiffeIdStatus defines the observed state of SpiffeId
           properties:
             entryId:
-              description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
-                of cluster Important: Run "operator-sdk generate k8s" to regenerate
-                code after modifying this file Add custom validation using kubebuilder
-                tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html'
+              description: The spire Entry ID created for this Spiffe ID
               type: string
           required:
           - entryId
