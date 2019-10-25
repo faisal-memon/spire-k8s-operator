@@ -1,0 +1,7 @@
+apiVersion: spiffeid.spiffe.io/v1alpha1
+kind: SpiffeId
+metadata:
+  name: example-spiffeid
+spec:
+  # Add fields here
+  size: 3
