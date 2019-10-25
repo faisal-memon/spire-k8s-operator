@@ -16,13 +16,11 @@ spec:
       containers:
         - name: spire-k8s-operator
           # Replace this with the built image name
-          image: REPLACE_IMAGE
+          image: docker.tw.ee/spire-k8s-operator:v0.0.1
           command:
           - spire-k8s-operator
           imagePullPolicy: Always
           env:
-            - name: WATCH_NAMESPACE
-              value: ""
             - name: POD_NAME
               valueFrom:
                 fieldRef:

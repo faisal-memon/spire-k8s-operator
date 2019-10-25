@@ -4,6 +4,8 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/spiffe/go-spiffe/spiffe"
+	"github.com/spiffe/spire/proto/spire/api/registration"
 	"os"
 	"runtime"
 
@@ -53,6 +55,10 @@ func main() {
 	// controller-runtime)
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 
+    var spireHost string
+
+	pflag.StringVar(&spireHost, "spire-server", "", "Host and port of the spire server to connect to")
+
 	pflag.Parse()
 
 	// Use a zap logr.Logger implementation. If none of the zap
@@ -67,9 +73,8 @@ func main() {
 
 	printVersion()
 
-	namespace, err := k8sutil.GetWatchNamespace()
-	if err != nil {
-		log.Error(err, "Failed to get watch namespace")
+	if len(spireHost) <= 0 {
+		log.Error(fmt.Errorf("--spire-server flag must be provided"), "")
 		os.Exit(1)
 	}
 
@@ -108,7 +113,12 @@ func main() {
 	}
 
 	// Setup all Controllers
-	if err := controller.AddToManager(mgr); err != nil {
+	spireClient, err := ConnectSpire(spireHost)
+	if err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
+	if err := controller.AddToManager(mgr, spireClient); err != nil {
 		log.Error(err, "")
 		os.Exit(1)
 	}
@@ -131,13 +141,22 @@ func main() {
 	// CreateServiceMonitors will automatically create the prometheus-operator ServiceMonitor resources
 	// necessary to configure Prometheus to scrape metrics from this operator.
 	services := []*v1.Service{service}
-	_, err = metrics.CreateServiceMonitors(cfg, namespace, services)
+
+	namespace, err := k8sutil.GetOperatorNamespace()
 	if err != nil {
-		log.Info("Could not create ServiceMonitor object", "error", err.Error())
-		// If this operator is deployed to a cluster without the prometheus-operator running, it will return
-		// ErrServiceMonitorNotPresent, which can be used to safely skip ServiceMonitor creation.
-		if err == metrics.ErrServiceMonitorNotPresent {
-			log.Info("Install prometheus-operator in your cluster to create ServiceMonitor objects", "error", err.Error())
+		if err != k8sutil.ErrRunLocal {
+			log.Error(err, "Failed to get my namespace")
+			os.Exit(1)
+		}
+	} else {
+		_, err = metrics.CreateServiceMonitors(cfg, namespace, services)
+		if err != nil {
+			log.Info("Could not create ServiceMonitor object", "error", err.Error())
+			// If this operator is deployed to a cluster without the prometheus-operator running, it will return
+			// ErrServiceMonitorNotPresent, which can be used to safely skip ServiceMonitor creation.
+			if err == metrics.ErrServiceMonitorNotPresent {
+				log.Info("Install prometheus-operator in your cluster to create ServiceMonitor objects", "error", err.Error())
+			}
 		}
 	}
 
@@ -148,6 +167,20 @@ func main() {
 		log.Error(err, "Manager exited non-zero")
 		os.Exit(1)
 	}
+}
+
+func ConnectSpire(serviceName string) (registration.RegistrationClient, error) {
+
+	tlsPeer, err := spiffe.NewTLSPeer(spiffe.WithWorkloadAPIAddr("unix:///run/spire/sockets/agent.sock"))
+	if err != nil {
+		return nil, err
+	}
+	conn, err := tlsPeer.DialGRPC(context.TODO(), serviceName, spiffe.ExpectAnyPeer())
+	if err != nil {
+		return nil, err
+	}
+	spireClient := registration.NewRegistrationClient(conn)
+	return spireClient, nil
 }
 
 // serveCRMetrics gets the Operator/CustomResource GVKs and generates metrics based on those types.

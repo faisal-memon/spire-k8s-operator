@@ -24,20 +24,15 @@ const spiffeIdFinalizer = "finalizer.spiffeid.spiffe.io"
 
 var log = logf.Log.WithName("controller_spiffeid")
 
-/**
-* USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
-* business logic.  Delete these comments after modifying this file.*
- */
-
 // Add creates a new SpiffeId Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
-func Add(mgr manager.Manager) error {
-	return add(mgr, newReconciler(mgr))
+func Add(mgr manager.Manager, r registration.RegistrationClient) error {
+	return add(mgr, newReconciler(mgr, r))
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileSpiffeId{client: mgr.GetClient(), scheme: mgr.GetScheme()}
+func newReconciler(mgr manager.Manager, r registration.RegistrationClient) reconcile.Reconciler {
+	return &ReconcileSpiffeId{client: mgr.GetClient(), scheme: mgr.GetScheme(), spireClient: r}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
