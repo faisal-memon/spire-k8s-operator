@@ -64,8 +64,8 @@ var _ reconcile.Reconciler = &ReconcileSpiffeId{}
 type ReconcileSpiffeId struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client client.Client
-	scheme *runtime.Scheme
+	client      client.Client
+	scheme      *runtime.Scheme
 	spireClient registration.RegistrationClient
 }
 
@@ -126,7 +126,7 @@ func (r *ReconcileSpiffeId) Reconcile(request reconcile.Request) (reconcile.Resu
 	instance.Status.EntryId = entryId
 	err = r.client.Update(context.TODO(), instance)
 	if err != nil {
-		reqLogger.Error(err, "Failed to update SpiffeId with Entry ID" + entryId)
+		reqLogger.Error(err, "Failed to update SpiffeId with Entry ID"+entryId)
 		return reconcile.Result{}, err
 	}
 
@@ -141,14 +141,13 @@ func (r *ReconcileSpiffeId) createSpireEntry(reqLogger logr.Logger, instance *sp
 	})
 	if err != nil {
 		if status.Code(err) == codes.AlreadyExists {
-		  // TODO: return existing entry ID?
+			// TODO: return existing entry ID?
 		}
 		return "", err
 	}
 
 	return entryId.Id, nil
 }
-
 
 func (r *ReconcileSpiffeId) finalizeSpiffeId(reqLogger logr.Logger, instance *spiffeidv1alpha1.SpiffeId) error {
 	regEntryId := &registration.RegistrationEntryID{
@@ -159,7 +158,7 @@ func (r *ReconcileSpiffeId) finalizeSpiffeId(reqLogger logr.Logger, instance *sp
 		if status.Code(err) == codes.NotFound {
 			return nil
 		}
-		reqLogger.Error(err, "Failed to delete registration entry " + regEntryId.Id)
+		reqLogger.Error(err, "Failed to delete registration entry "+regEntryId.Id)
 		return err
 	}
 	reqLogger.Info("Successfully finalized spiffeId")
@@ -178,7 +177,6 @@ func (r *ReconcileSpiffeId) addFinalizer(reqLogger logr.Logger, instance *spiffe
 	}
 	return nil
 }
-
 
 func contains(list []string, s string) bool {
 	for _, v := range list {
