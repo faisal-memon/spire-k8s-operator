@@ -2,23 +2,25 @@ package spiffeid
 
 import (
 	"context"
+	"github.com/go-logr/logr"
+	"github.com/spiffe/spire/proto/spire/common"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/spiffe/spire/proto/spire/api/registration"
 	spiffeidv1alpha1 "github.com/transferwise/spire-k8s-operator/pkg/apis/spiffeid/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
+
+const spiffeIdFinalizer = "finalizer.spiffeid.spiffe.io"
 
 var log = logf.Log.WithName("controller_spiffeid")
 
@@ -52,16 +54,6 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// TODO(user): Modify this to be the types you create that are owned by the primary resource
-	// Watch for changes to secondary resource Pods and requeue the owner SpiffeId
-	err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForOwner{
-		IsController: true,
-		OwnerType:    &spiffeidv1alpha1.SpiffeId{},
-	})
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -74,12 +66,11 @@ type ReconcileSpiffeId struct {
 	// that reads objects from the cache and writes to the apiserver
 	client client.Client
 	scheme *runtime.Scheme
+	spireClient registration.RegistrationClient
 }
 
 // Reconcile reads that state of the cluster for a SpiffeId object and makes changes based on the state read
 // and what is in the SpiffeId.Spec
-// TODO(user): Modify this Reconcile function to implement your Controller logic.  This example creates
-// a Pod as an example
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
@@ -92,63 +83,117 @@ func (r *ReconcileSpiffeId) Reconcile(request reconcile.Request) (reconcile.Resu
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			// Request object not found, could have been deleted after reconcile request.
-			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
-			// Return and don't requeue
+			// If the resource is not found, that means all of
+			// the finalizers have been removed, and the memcached
+			// resource has been deleted, so there is nothing left
+			// to do.
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
 
-	// Define a new Pod object
-	pod := newPodForCR(instance)
+	if instance.GetDeletionTimestamp() != nil {
+		if !contains(instance.GetFinalizers(), spiffeIdFinalizer) {
+			// Run finalization logic. If the finalization logic fails, don't remove the finalizer so
+			// that we can retry during the next reconciliation.
+			if err := r.finalizeSpiffeId(reqLogger, instance); err != nil {
+				return reconcile.Result{}, err
+			}
 
-	// Set SpiffeId instance as the owner and controller
-	if err := controllerutil.SetControllerReference(instance, pod, r.scheme); err != nil {
-		return reconcile.Result{}, err
+			// Remove spiffeIdFinalizer. Once all finalizers have been
+			// removed, the object will be deleted.
+			instance.SetFinalizers(remove(instance.GetFinalizers(), spiffeIdFinalizer))
+			err := r.client.Update(context.TODO(), instance)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+		}
+		return reconcile.Result{}, nil
 	}
 
-	// Check if this Pod already exists
-	found := &corev1.Pod{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, found)
-	if err != nil && errors.IsNotFound(err) {
-		reqLogger.Info("Creating a new Pod", "Pod.Namespace", pod.Namespace, "Pod.Name", pod.Name)
-		err = r.client.Create(context.TODO(), pod)
-		if err != nil {
+	if !contains(instance.GetFinalizers(), spiffeIdFinalizer) {
+		if err := r.addFinalizer(reqLogger, instance); err != nil {
 			return reconcile.Result{}, err
 		}
+	}
 
-		// Pod created successfully - don't requeue
-		return reconcile.Result{}, nil
-	} else if err != nil {
+	entryId, err := r.createSpireEntry(reqLogger, instance)
+	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	// Pod already exists - don't requeue
-	reqLogger.Info("Skip reconcile: Pod already exists", "Pod.Namespace", found.Namespace, "Pod.Name", found.Name)
+	instance.Status.EntryId = entryId
+	err = r.client.Update(context.TODO(), instance)
+	if err != nil {
+		reqLogger.Error(err, "Failed to update SpiffeId with Entry ID" + entryId)
+		return reconcile.Result{}, err
+	}
+
 	return reconcile.Result{}, nil
 }
 
-// newPodForCR returns a busybox pod with the same name/namespace as the cr
-func newPodForCR(cr *spiffeidv1alpha1.SpiffeId) *corev1.Pod {
-	labels := map[string]string{
-		"app": cr.Name,
+func (r *ReconcileSpiffeId) createSpireEntry(reqLogger logr.Logger, instance *spiffeidv1alpha1.SpiffeId) (string, error) {
+	entryId, err := r.spireClient.CreateEntry(context.TODO(), &common.RegistrationEntry{
+		Selectors: nil,
+		ParentId:  "",
+		SpiffeId:  instance.Spec.SpiffeId,
+	})
+	if err != nil {
+		if status.Code(err) == codes.AlreadyExists {
+		  // TODO: return existing entry ID?
+		}
+		return "", err
 	}
-	return &corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Name + "-pod",
-			Namespace: cr.Namespace,
-			Labels:    labels,
-		},
-		Spec: corev1.PodSpec{
-			Containers: []corev1.Container{
-				{
-					Name:    "busybox",
-					Image:   "busybox",
-					Command: []string{"sleep", "3600"},
-				},
-			},
-		},
+
+	return entryId.Id, nil
+}
+
+
+func (r *ReconcileSpiffeId) finalizeSpiffeId(reqLogger logr.Logger, instance *spiffeidv1alpha1.SpiffeId) error {
+	regEntryId := &registration.RegistrationEntryID{
+		Id: instance.Status.EntryId,
 	}
+	_, err := r.spireClient.DeleteEntry(context.TODO(), regEntryId)
+	if err != nil {
+		if status.Code(err) == codes.NotFound {
+			return nil
+		}
+		reqLogger.Error(err, "Failed to delete registration entry " + regEntryId.Id)
+		return err
+	}
+	reqLogger.Info("Successfully finalized spiffeId")
+	return nil
+}
+
+func (r *ReconcileSpiffeId) addFinalizer(reqLogger logr.Logger, instance *spiffeidv1alpha1.SpiffeId) error {
+	reqLogger.Info("Adding Finalizer for SpiffeId")
+	instance.SetFinalizers(append(instance.GetFinalizers(), spiffeIdFinalizer))
+
+	// Update CR
+	err := r.client.Update(context.TODO(), instance)
+	if err != nil {
+		reqLogger.Error(err, "Failed to update SpiffeId with finalizer")
+		return err
+	}
+	return nil
+}
+
+
+func contains(list []string, s string) bool {
+	for _, v := range list {
+		if v == s {
+			return true
+		}
+	}
+	return false
+}
+
+func remove(list []string, s string) []string {
+	for i, v := range list {
+		if v == s {
+			list = append(list[:i], list[i+1:]...)
+		}
+	}
+	return list
 }
