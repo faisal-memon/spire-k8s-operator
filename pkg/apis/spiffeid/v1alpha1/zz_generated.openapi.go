@@ -11,17 +11,17 @@ import (
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
-		"github.com/transferwise/spire-k8s-operator/pkg/apis/spiffeid/v1alpha1.SpiffeId":       schema_pkg_apis_spiffeid_v1alpha1_SpiffeId(ref),
-		"github.com/transferwise/spire-k8s-operator/pkg/apis/spiffeid/v1alpha1.SpiffeIdSpec":   schema_pkg_apis_spiffeid_v1alpha1_SpiffeIdSpec(ref),
-		"github.com/transferwise/spire-k8s-operator/pkg/apis/spiffeid/v1alpha1.SpiffeIdStatus": schema_pkg_apis_spiffeid_v1alpha1_SpiffeIdStatus(ref),
+		"github.com/transferwise/spire-k8s-operator/pkg/apis/spiffeid/v1alpha1.ClusterSpiffeId": schema_pkg_apis_spiffeid_v1alpha1_ClusterSpiffeId(ref),
+		"github.com/transferwise/spire-k8s-operator/pkg/apis/spiffeid/v1alpha1.SpiffeIdSpec":    schema_pkg_apis_spiffeid_v1alpha1_SpiffeIdSpec(ref),
+		"github.com/transferwise/spire-k8s-operator/pkg/apis/spiffeid/v1alpha1.SpiffeIdStatus":  schema_pkg_apis_spiffeid_v1alpha1_SpiffeIdStatus(ref),
 	}
 }
 
-func schema_pkg_apis_spiffeid_v1alpha1_SpiffeId(ref common.ReferenceCallback) common.OpenAPIDefinition {
+func schema_pkg_apis_spiffeid_v1alpha1_ClusterSpiffeId(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "SpiffeId is the Schema for the spiffeids API",
+				Description: "ClusterSpiffeId is the Schema for the spiffeids API",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"kind": {

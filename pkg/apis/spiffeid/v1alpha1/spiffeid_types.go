@@ -40,11 +40,11 @@ type SpiffeIdStatus struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// SpiffeId is the Schema for the spiffeids API
+// ClusterSpiffeId is the Schema for the spiffeids API
 // +k8s:openapi-gen=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:path=spiffeids,scope=Namespaced
-type SpiffeId struct {
+// +kubebuilder:resource:path=clusterspiffeids,scope=Cluster
+type ClusterSpiffeId struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
@@ -54,13 +54,13 @@ type SpiffeId struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// SpiffeIdList contains a list of SpiffeId
-type SpiffeIdList struct {
+// ClusterSpiffeIdList contains a list of ClusterSpiffeId
+type ClusterSpiffeIdList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []SpiffeId `json:"items"`
+	Items           []ClusterSpiffeId `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&SpiffeId{}, &SpiffeIdList{})
+	SchemeBuilder.Register(&ClusterSpiffeId{}, &ClusterSpiffeIdList{})
 }

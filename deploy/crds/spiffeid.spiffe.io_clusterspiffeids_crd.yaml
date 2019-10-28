@@ -1,20 +1,20 @@
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  name: spiffeids.spiffeid.spiffe.io
+  name: clusterspiffeids.spiffeid.spiffe.io
 spec:
   group: spiffeid.spiffe.io
   names:
-    kind: SpiffeId
-    listKind: SpiffeIdList
-    plural: spiffeids
-    singular: spiffeid
-  scope: Namespaced
+    kind: ClusterSpiffeId
+    listKind: ClusterSpiffeIdList
+    plural: clusterspiffeids
+    singular: clusterspiffeid
+  scope: Cluster
   subresources:
     status: {}
   validation:
     openAPIV3Schema:
-      description: SpiffeId is the Schema for the spiffeids API
+      description: ClusterSpiffeId is the Schema for the spiffeids API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation

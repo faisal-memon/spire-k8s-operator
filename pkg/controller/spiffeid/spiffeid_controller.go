@@ -48,7 +48,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource SpiffeId
-	err = c.Watch(&source.Kind{Type: &spiffeidv1alpha1.SpiffeId{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &spiffeidv1alpha1.ClusterSpiffeId{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
@@ -92,7 +92,7 @@ func (r *ReconcileSpiffeId) Reconcile(request reconcile.Request) (reconcile.Resu
 	}
 
 	// Fetch the SpiffeId instance
-	instance := &spiffeidv1alpha1.SpiffeId{}
+	instance := &spiffeidv1alpha1.ClusterSpiffeId{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if k8errors.IsNotFound(err) {
@@ -240,7 +240,7 @@ func (r *ReconcileSpiffeId) getExistingEntry(reqLogger logr.Logger, id string, s
 	return "", ExistingEntryNotFoundError
 }
 
-func (r *ReconcileSpiffeId) createSpireEntry(reqLogger logr.Logger, instance *spiffeidv1alpha1.SpiffeId) (string, error) {
+func (r *ReconcileSpiffeId) createSpireEntry(reqLogger logr.Logger, instance *spiffeidv1alpha1.ClusterSpiffeId) (string, error) {
 
 	// TODO: sanitize!
 	selectors := make([]*common.Selector, 0, len(instance.Spec.Selector.PodLabel))
@@ -276,7 +276,7 @@ func (r *ReconcileSpiffeId) createSpireEntry(reqLogger logr.Logger, instance *sp
 	return regEntryId.Id, nil
 }
 
-func (r *ReconcileSpiffeId) finalizeSpiffeId(reqLogger logr.Logger, instance *spiffeidv1alpha1.SpiffeId) error {
+func (r *ReconcileSpiffeId) finalizeSpiffeId(reqLogger logr.Logger, instance *spiffeidv1alpha1.ClusterSpiffeId) error {
 	regEntryId := &registration.RegistrationEntryID{
 		Id: instance.Status.EntryId,
 	}
@@ -295,7 +295,7 @@ func (r *ReconcileSpiffeId) finalizeSpiffeId(reqLogger logr.Logger, instance *sp
 	return nil
 }
 
-func (r *ReconcileSpiffeId) addFinalizer(reqLogger logr.Logger, instance *spiffeidv1alpha1.SpiffeId) error {
+func (r *ReconcileSpiffeId) addFinalizer(reqLogger logr.Logger, instance *spiffeidv1alpha1.ClusterSpiffeId) error {
 	reqLogger.Info("Adding Finalizer for SpiffeId")
 	instance.SetFinalizers(append(instance.GetFinalizers(), spiffeIdFinalizer))
 
