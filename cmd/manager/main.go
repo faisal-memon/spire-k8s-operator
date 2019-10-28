@@ -7,8 +7,8 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/spiffe/go-spiffe/spiffe"
 	"github.com/spiffe/spire/proto/spire/api/registration"
-	"github.com/transferwise/spire-k8s-operator/pkg/controller/spiffeid"
 	"github.com/transferwise/spire-k8s-operator/pkg/controller/pod"
+	"github.com/transferwise/spire-k8s-operator/pkg/controller/spiffeid"
 	"os"
 	"runtime"
 
@@ -57,7 +57,7 @@ func main() {
 	// controller-runtime)
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 
-    var spireHost string
+	var spireHost string
 	var trustDomain string
 	var cluster string
 	var enablePodController bool
@@ -236,8 +236,6 @@ func (slw SpiffeLogWrapper) Warnf(format string, args ...interface{}) {
 func (slw SpiffeLogWrapper) Errorf(format string, args ...interface{}) {
 	slw.delegate.Info(fmt.Sprintf(format, args))
 }
-
-
 
 func ConnectSpire(serviceName string) (registration.RegistrationClient, error) {
 

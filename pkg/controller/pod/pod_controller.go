@@ -62,6 +62,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 var _ reconcile.Reconciler = &ReconcilePod{}
 
 type PodReconcilerMode int32
+
 const (
 	SERVICEACCOUNT PodReconcilerMode = iota
 	LABEL
@@ -70,8 +71,8 @@ const (
 
 type PodReconcilerConfig struct {
 	TrustDomain string
-	Mode PodReconcilerMode
-	Value string
+	Mode        PodReconcilerMode
+	Value       string
 }
 
 // ReconcilePod reconciles a Pod object
@@ -81,7 +82,7 @@ type ReconcilePod struct {
 	client      client.Client
 	scheme      *runtime.Scheme
 	spireClient registration.RegistrationClient
-	config PodReconcilerConfig
+	config      PodReconcilerConfig
 }
 
 // Reconcile reads that state of the cluster for a SpiffeId object and makes changes based on the state read
@@ -115,12 +116,12 @@ func (r *ReconcilePod) Reconcile(request reconcile.Request) (reconcile.Result, e
 	case SERVICEACCOUNT:
 		spiffeId = r.makeID("ns/%s/sa/%s", request.Namespace, pod.Spec.ServiceAccountName)
 	case LABEL:
-		 if val, ok := pod.GetLabels()[r.config.Value]; ok {
-		 	spiffeId = r.makeID("%s", val)
-		 } else {
-		 	 // No relevant label
-			 return reconcile.Result{}, nil
-		 }
+		if val, ok := pod.GetLabels()[r.config.Value]; ok {
+			spiffeId = r.makeID("%s", val)
+		} else {
+			// No relevant label
+			return reconcile.Result{}, nil
+		}
 	case ANNOTATION:
 		if val, ok := pod.GetAnnotations()[r.config.Value]; ok {
 			spiffeId = r.makeID("%s", val)
@@ -137,7 +138,7 @@ func (r *ReconcilePod) Reconcile(request reconcile.Request) (reconcile.Result, e
 			ObjectMeta: v1.ObjectMeta{
 				Name: spiffeidname,
 			},
-			Spec:       spiffeidv1alpha1.SpiffeIdSpec{
+			Spec: spiffeidv1alpha1.SpiffeIdSpec{
 				SpiffeId: spiffeId,
 				Selector: spiffeidv1alpha1.Selector{
 					PodName: pod.Name,
@@ -149,7 +150,7 @@ func (r *ReconcilePod) Reconcile(request reconcile.Request) (reconcile.Result, e
 			reqLogger.Error(err, "Failed to create new SpiffeID", "SpiffeID.Name", clusterSpiffeId.Name)
 			return reconcile.Result{}, err
 		}
-		reqLogger.Info("Creating a new SpiffeID",  "SpiffeID.Name", clusterSpiffeId.Name)
+		reqLogger.Info("Creating a new SpiffeID", "SpiffeID.Name", clusterSpiffeId.Name)
 		err = r.client.Create(context.TODO(), clusterSpiffeId)
 		if err != nil {
 			reqLogger.Error(err, "Failed to create new SpiffeID", "SpiffeID.Name", clusterSpiffeId.Name)

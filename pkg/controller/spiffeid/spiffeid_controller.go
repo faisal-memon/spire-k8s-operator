@@ -71,7 +71,7 @@ type ReconcileSpiffeId struct {
 	client      client.Client
 	scheme      *runtime.Scheme
 	spireClient registration.RegistrationClient
-	conf		 ReconcileSpiffeIdConfig
+	conf        ReconcileSpiffeIdConfig
 	myId        *string
 }
 
@@ -161,7 +161,6 @@ func (r *ReconcileSpiffeId) makeID(pathFmt string, pathArgs ...interface{}) stri
 	return id.String()
 }
 
-
 // ServerID creates a server SPIFFE ID string given a trustDomain.
 func ServerID(trustDomain string) string {
 	return ServerURI(trustDomain).String()
@@ -176,7 +175,6 @@ func ServerURI(trustDomain string) *url.URL {
 	}
 }
 
-
 func (r *ReconcileSpiffeId) nodeID() string {
 	return r.makeID("spire-k8s-operator/%s/node", r.conf.Cluster)
 }
@@ -188,8 +186,8 @@ func (r *ReconcileSpiffeId) setMyId() error {
 		Selectors: []*common.Selector{
 			{Type: "k8s_psat", Value: fmt.Sprintf("cluster:%s", r.conf.Cluster)},
 		},
-		ParentId:  ServerID(r.conf.TrustDomain),
-		SpiffeId:  myId,
+		ParentId: ServerID(r.conf.TrustDomain),
+		SpiffeId: myId,
 	})
 	if err != nil {
 		if status.Code(err) != codes.AlreadyExists {
@@ -291,7 +289,7 @@ func (r *ReconcileSpiffeId) finalizeSpiffeId(reqLogger logr.Logger, instance *sp
 		// Spire server returns internal server error rather than NotFound when the entry doesn't exist.
 		//reqLogger.Error(err, "Failed to delete registration entry", "entryID", regEntryId.Id)
 		//return err
-		reqLogger.Error(err,"Got error deleting spire entry, but assuming it's OK")
+		reqLogger.Error(err, "Got error deleting spire entry, but assuming it's OK")
 		return nil
 	}
 	reqLogger.Info("Successfully finalized spiffeId")
