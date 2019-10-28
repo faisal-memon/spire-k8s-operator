@@ -92,7 +92,6 @@ type ReconcilePod struct {
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *ReconcilePod) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reqLogger.Info("Reconciling Pod")
 
 	// Fetch the Pod instance
 	pod := &corev1.Pod{}
@@ -130,6 +129,7 @@ func (r *ReconcilePod) Reconcile(request reconcile.Request) (reconcile.Result, e
 			return reconcile.Result{}, nil
 		}
 	}
+	reqLogger.Info("Reconciling Pod")
 
 	existing := &spiffeidv1alpha1.ClusterSpiffeId{}
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: spiffeidname}, existing)
