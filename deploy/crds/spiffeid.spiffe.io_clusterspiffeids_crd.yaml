@@ -42,9 +42,6 @@ spec:
                   type: object
                 podName:
                   type: string
-              required:
-              - podLabel
-              - podName
               type: object
             spiffeId:
               description: The Spiffe ID to create
