@@ -4,8 +4,10 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/go-logr/logr"
 	"github.com/spiffe/go-spiffe/spiffe"
 	"github.com/spiffe/spire/proto/spire/api/registration"
+	"github.com/transferwise/spire-k8s-operator/pkg/controller/spiffeid"
 	"os"
 	"runtime"
 
@@ -14,7 +16,6 @@ import (
 	"k8s.io/client-go/rest"
 
 	"github.com/transferwise/spire-k8s-operator/pkg/apis"
-	"github.com/transferwise/spire-k8s-operator/pkg/controller"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	kubemetrics "github.com/operator-framework/operator-sdk/pkg/kube-metrics"
@@ -56,8 +57,12 @@ func main() {
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 
     var spireHost string
+	var trustDomain string
+	var cluster string
 
 	pflag.StringVar(&spireHost, "spire-server", "", "Host and port of the spire server to connect to")
+	pflag.StringVar(&trustDomain, "trust-domain", "", "Spire trust domain to create IDs for")
+	pflag.StringVar(&cluster, "cluster", "", "Cluster name as configured for psat attestor")
 
 	pflag.Parse()
 
@@ -78,11 +83,26 @@ func main() {
 		os.Exit(1)
 	}
 
+	if len(cluster) <= 0 {
+		log.Error(fmt.Errorf("--cluster flag must be provided"), "")
+		os.Exit(1)
+	}
+
+	if len(trustDomain) <= 0 {
+		log.Error(fmt.Errorf("--trust-domain flag must be provided"), "")
+		os.Exit(1)
+	}
+
 	// Get a config to talk to the apiserver
 	cfg, err := config.GetConfig()
 	if err != nil {
 		log.Error(err, "")
 		os.Exit(1)
+	}
+
+	reconcilerConfig := spiffeid.ReconcileSpiffeIdConfig{
+		TrustDomain: trustDomain,
+		Cluster:     cluster,
 	}
 
 	ctx := context.TODO()
@@ -118,7 +138,9 @@ func main() {
 		log.Error(err, "")
 		os.Exit(1)
 	}
-	if err := controller.AddToManager(mgr, spireClient); err != nil {
+	log.Info("Connected to spire server.")
+
+	if err := spiffeid.Add(mgr, spireClient, reconcilerConfig); err != nil {
 		log.Error(err, "")
 		os.Exit(1)
 	}
@@ -169,9 +191,28 @@ func main() {
 	}
 }
 
+type SpiffeLogWrapper struct {
+	delegate logr.Logger
+}
+
+func (slw SpiffeLogWrapper) Debugf(format string, args ...interface{}) {
+	slw.delegate.V(1).Info(fmt.Sprintf(format, args))
+}
+func (slw SpiffeLogWrapper) Infof(format string, args ...interface{}) {
+	slw.delegate.Info(fmt.Sprintf(format, args))
+}
+func (slw SpiffeLogWrapper) Warnf(format string, args ...interface{}) {
+	slw.delegate.Info(fmt.Sprintf(format, args))
+}
+func (slw SpiffeLogWrapper) Errorf(format string, args ...interface{}) {
+	slw.delegate.Info(fmt.Sprintf(format, args))
+}
+
+
+
 func ConnectSpire(serviceName string) (registration.RegistrationClient, error) {
 
-	tlsPeer, err := spiffe.NewTLSPeer(spiffe.WithWorkloadAPIAddr("unix:///run/spire/sockets/agent.sock"))
+	tlsPeer, err := spiffe.NewTLSPeer(spiffe.WithWorkloadAPIAddr("unix:///run/spire/sockets/agent.sock"), spiffe.WithLogger(SpiffeLogWrapper{log}))
 	if err != nil {
 		return nil, err
 	}
