@@ -8,6 +8,7 @@ import (
 	"github.com/spiffe/go-spiffe/spiffe"
 	"github.com/spiffe/spire/proto/spire/api/registration"
 	"github.com/transferwise/spire-k8s-operator/pkg/controller/spiffeid"
+	"github.com/transferwise/spire-k8s-operator/pkg/controller/pod"
 	"os"
 	"runtime"
 
@@ -59,10 +60,16 @@ func main() {
     var spireHost string
 	var trustDomain string
 	var cluster string
+	var enablePodController bool
+	var podLabel string
+	var podAnnotation string
 
 	pflag.StringVar(&spireHost, "spire-server", "", "Host and port of the spire server to connect to")
 	pflag.StringVar(&trustDomain, "trust-domain", "", "Spire trust domain to create IDs for")
 	pflag.StringVar(&cluster, "cluster", "", "Cluster name as configured for psat attestor")
+	pflag.BoolVar(&enablePodController, "enable-pod-controller", false, "Enable support for old controller style spiffe ID creation")
+	pflag.StringVar(&podLabel, "pod-label", "", "Pod label to use for old auto-creation mechanism")
+	pflag.StringVar(&podAnnotation, "pod-annotation", "", "Pod annotation to use for old auto-creation mechanism")
 
 	pflag.Parse()
 
@@ -143,6 +150,28 @@ func main() {
 	if err := spiffeid.Add(mgr, spireClient, reconcilerConfig); err != nil {
 		log.Error(err, "")
 		os.Exit(1)
+	}
+
+	if enablePodController {
+		mode := pod.SERVICEACCOUNT
+		value := ""
+		if len(podLabel) > 0 {
+			mode = pod.LABEL
+			value = podLabel
+		}
+		if len(podAnnotation) > 0 {
+			mode = pod.ANNOTATION
+			value = podAnnotation
+		}
+		podControllerConfig := pod.PodReconcilerConfig{
+			TrustDomain: trustDomain,
+			Mode:        mode,
+			Value:       value,
+		}
+		if err := pod.Add(mgr, podControllerConfig); err != nil {
+			log.Error(err, "")
+			os.Exit(1)
+		}
 	}
 
 	if err = serveCRMetrics(cfg); err != nil {

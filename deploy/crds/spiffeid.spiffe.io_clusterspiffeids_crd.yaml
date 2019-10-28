@@ -40,8 +40,11 @@ spec:
                   description: Pod label names/values to match for this spiffe ID
                     To match, pods must be in the same namespace as this ID resource.
                   type: object
+                podName:
+                  type: string
               required:
               - podLabel
+              - podName
               type: object
             spiffeId:
               description: The Spiffe ID to create

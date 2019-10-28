@@ -247,6 +247,9 @@ func (r *ReconcileSpiffeId) createSpireEntry(reqLogger logr.Logger, instance *sp
 	for k, v := range instance.Spec.Selector.PodLabel {
 		selectors = append(selectors, &common.Selector{Value: fmt.Sprintf("k8s:pod-label:%s:%s", k, v)})
 	}
+	if len(instance.Spec.Selector.PodName) > 0 {
+		selectors = append(selectors, &common.Selector{Value: fmt.Sprintf("k8s:pod-name:%s", instance.Spec.Selector.PodName)})
+	}
 
 	reqLogger.Info("Creating entry", "spiffeID", instance.Spec.SpiffeId)
 

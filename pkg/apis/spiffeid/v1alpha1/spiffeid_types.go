@@ -11,6 +11,7 @@ type Selector struct {
 	// Pod label names/values to match for this spiffe ID
 	// To match, pods must be in the same namespace as this ID resource.
 	PodLabel map[string]string `json:"podLabel"`
+	PodName string `json:"podName"`
 }
 
 // SpiffeIdSpec defines the desired state of SpiffeId
