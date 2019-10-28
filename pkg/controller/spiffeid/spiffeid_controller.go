@@ -137,6 +137,9 @@ func (r *ReconcileSpiffeId) Reconcile(request reconcile.Request) (reconcile.Resu
 
 	entryId, err := r.createSpireEntry(reqLogger, instance)
 	if err != nil {
+		if status.Code(err) == codes.AlreadyExists && instance.Status.EntryId == entryId {
+			return reconcile.Result{}, nil
+		}
 		return reconcile.Result{}, err
 	}
 
@@ -258,16 +261,13 @@ func (r *ReconcileSpiffeId) createSpireEntry(reqLogger logr.Logger, instance *sp
 	})
 	if err != nil {
 		if status.Code(err) == codes.AlreadyExists {
-			// TODO: How to prevent accidental deletion if someone creates duplicate entries
-			// Is the finalizer actually the right way to clean up?
-			// Use another CRD to provide tracking of resources?
 			entryId, err := r.getExistingEntry(reqLogger, instance.Spec.SpiffeId, selectors)
 			if err != nil {
 				reqLogger.Error(err, "Failed to reuse existing spire entry")
 				return "", err
 			}
-			reqLogger.Info("Reused existing entry", "entryID", entryId, "spiffeID", instance.Spec.SpiffeId)
-			return entryId, nil
+			reqLogger.Info("Found existing entry", "entryID", entryId, "spiffeID", instance.Spec.SpiffeId)
+			return entryId, err
 		}
 		reqLogger.Error(err, "Failed to create spire entry")
 		return "", err
