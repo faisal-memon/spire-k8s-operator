@@ -153,14 +153,14 @@ func main() {
 	}
 
 	if enablePodController {
-		mode := pod.SERVICEACCOUNT
+		mode := pod.PodReconcilerModeServiceAccount
 		value := ""
 		if len(podLabel) > 0 {
-			mode = pod.LABEL
+			mode = pod.PodReconcilerModeLabel
 			value = podLabel
 		}
 		if len(podAnnotation) > 0 {
-			mode = pod.ANNOTATION
+			mode = pod.PodReconcilerModeAnnotation
 			value = podAnnotation
 		}
 		podControllerConfig := pod.PodReconcilerConfig{

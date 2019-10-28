@@ -64,9 +64,9 @@ var _ reconcile.Reconciler = &ReconcilePod{}
 type PodReconcilerMode int32
 
 const (
-	SERVICEACCOUNT PodReconcilerMode = iota
-	LABEL
-	ANNOTATION
+	PodReconcilerModeServiceAccount PodReconcilerMode = iota
+	PodReconcilerModeLabel
+	PodReconcilerModeAnnotation
 )
 
 type PodReconcilerConfig struct {
@@ -112,16 +112,16 @@ func (r *ReconcilePod) Reconcile(request reconcile.Request) (reconcile.Result, e
 
 	spiffeId := ""
 	switch r.config.Mode {
-	case SERVICEACCOUNT:
+	case PodReconcilerModeServiceAccount:
 		spiffeId = r.makeID("ns/%s/sa/%s", request.Namespace, pod.Spec.ServiceAccountName)
-	case LABEL:
+	case PodReconcilerModeLabel:
 		if val, ok := pod.GetLabels()[r.config.Value]; ok {
 			spiffeId = r.makeID("%s", val)
 		} else {
 			// No relevant label
 			return reconcile.Result{}, nil
 		}
-	case ANNOTATION:
+	case PodReconcilerModeAnnotation:
 		if val, ok := pod.GetAnnotations()[r.config.Value]; ok {
 			spiffeId = r.makeID("%s", val)
 		} else {
