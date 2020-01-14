@@ -34,6 +34,10 @@ spec:
             selector:
               description: Selectors to match for this ID
               properties:
+                arbitrary:
+                  items:
+                    type: string
+                  type: array
                 podLabel:
                   additionalProperties:
                     type: string
@@ -41,6 +45,8 @@ spec:
                     To match, pods must be in the same namespace as this ID resource.
                   type: object
                 podName:
+                  type: string
+                podNamespace:
                   type: string
               type: object
             spiffeId:

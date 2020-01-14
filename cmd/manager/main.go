@@ -7,8 +7,9 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/spiffe/go-spiffe/spiffe"
 	"github.com/spiffe/spire/proto/spire/api/registration"
+	"github.com/transferwise/spire-k8s-operator/pkg/controller/clusterspiffeid"
 	"github.com/transferwise/spire-k8s-operator/pkg/controller/pod"
-	"github.com/transferwise/spire-k8s-operator/pkg/controller/spiffeid"
+	SpiffeId "github.com/transferwise/spire-k8s-operator/pkg/controller/spiffeid"
 	"os"
 	"runtime"
 
@@ -107,11 +108,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	reconcilerConfig := spiffeid.ReconcileSpiffeIdConfig{
-		TrustDomain: trustDomain,
-		Cluster:     cluster,
-	}
-
 	ctx := context.TODO()
 	// Become the leader before proceeding
 	err = leader.Become(ctx, "spire-k8s-operator-lock")
@@ -147,7 +143,22 @@ func main() {
 	}
 	log.Info("Connected to spire server.")
 
-	if err := spiffeid.Add(mgr, spireClient, reconcilerConfig); err != nil {
+	clusterReconcilerConfig := clusterspiffeid.ReconcileClusterSpiffeIdConfig{
+		TrustDomain: trustDomain,
+		Cluster:     cluster,
+	}
+
+	if err := clusterspiffeid.Add(mgr, spireClient, clusterReconcilerConfig); err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
+
+	reconcilerConfig := SpiffeId.ReconcileSpiffeIdConfig{
+		TrustDomain: trustDomain,
+		Cluster:     cluster,
+	}
+
+	if err := SpiffeId.Add(mgr, spireClient, reconcilerConfig); err != nil {
 		log.Error(err, "")
 		os.Exit(1)
 	}

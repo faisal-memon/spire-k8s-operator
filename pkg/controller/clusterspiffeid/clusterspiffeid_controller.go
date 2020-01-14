@@ -1,4 +1,4 @@
-package SpiffeId
+package clusterspiffeid
 
 import (
 	"context"
@@ -21,31 +21,31 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-const spiffeIdFinalizer = "finalizer.spiffeid.spiffe.io"
+const spiffeIdFinalizer = "finalizer.clusterspiffeid.spiffe.io"
 
-var log = logf.Log.WithName("controller_spiffeid")
+var log = logf.Log.WithName("controller_clusterspiffeid")
 
 // Add creates a new SpiffeId Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
-func Add(mgr manager.Manager, r registration.RegistrationClient, conf ReconcileSpiffeIdConfig) error {
+func Add(mgr manager.Manager, r registration.RegistrationClient, conf ReconcileClusterSpiffeIdConfig) error {
 	return add(mgr, newReconciler(mgr, r, conf))
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager, r registration.RegistrationClient, conf ReconcileSpiffeIdConfig) reconcile.Reconciler {
-	return &ReconcileSpiffeId{client: mgr.GetClient(), scheme: mgr.GetScheme(), spireClient: r, conf: conf, utils: spiremgr.SpireUtils{SpireClient: r}, finalizer: spiremgr.Finalizer{Client: mgr.GetClient(), FinalizerName: spiffeIdFinalizer}}
+func newReconciler(mgr manager.Manager, r registration.RegistrationClient, conf ReconcileClusterSpiffeIdConfig) reconcile.Reconciler {
+    return &ReconcileClusterSpiffeId{client: mgr.GetClient(), scheme: mgr.GetScheme(), spireClient: r, conf: conf, utils: spiremgr.SpireUtils{SpireClient: r}, finalizer: spiremgr.Finalizer{Client: mgr.GetClient(), FinalizerName: spiffeIdFinalizer}}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller
-	c, err := controller.New("spiffeid-controller", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New("clusterspiffeid-controller", mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
 
 	// Watch for changes to primary resource SpiffeId
-	err = c.Watch(&source.Kind{Type: &spiffeidv1alpha1.SpiffeId{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &spiffeidv1alpha1.ClusterSpiffeId{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
@@ -53,24 +53,22 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	return nil
 }
 
-// blank assignment to verify that ReconcileSpiffeId implements reconcile.Reconciler
-var _ reconcile.Reconciler = &ReconcileSpiffeId{}
+// blank assignment to verify that ReconcileClusterSpiffeId implements reconcile.Reconciler
+var _ reconcile.Reconciler = &ReconcileClusterSpiffeId{}
 
-type ReconcileSpiffeIdConfig struct {
+type ReconcileClusterSpiffeIdConfig struct {
 	TrustDomain string
 	Cluster     string
-	AllowablePatterns	[]string
 }
 
-// ReconcileSpiffeId reconciles a SpiffeId object
-type ReconcileSpiffeId struct {
+// ReconcileClusterSpiffeId reconciles a SpiffeId object
+type ReconcileClusterSpiffeId struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
 	client      client.Client
 	scheme      *runtime.Scheme
 	spireClient registration.RegistrationClient
-	conf        ReconcileSpiffeIdConfig
-	myId        *string
+	conf        ReconcileClusterSpiffeIdConfig
 	utils       spiremgr.SpireUtils
 	finalizer   spiremgr.Finalizer
 }
@@ -80,12 +78,12 @@ type ReconcileSpiffeId struct {
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
-func (r *ReconcileSpiffeId) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *ReconcileClusterSpiffeId) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling SpiffeId")
 
 	// Fetch the SpiffeId instance
-	instance := &spiffeidv1alpha1.SpiffeId{}
+	instance := &spiffeidv1alpha1.ClusterSpiffeId{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if k8errors.IsNotFound(err) {
@@ -109,8 +107,8 @@ func (r *ReconcileSpiffeId) Reconcile(request reconcile.Request) (reconcile.Resu
     }
 
 	if err := r.finalizer.AddFinalizer(reqLogger, instance); err != nil {
-		return reconcile.Result{}, err
-	}
+			return reconcile.Result{}, err
+		}
 
 	entryId, err := r.createSpireEntry(reqLogger, instance)
 	if err != nil {
@@ -132,9 +130,8 @@ func (r *ReconcileSpiffeId) Reconcile(request reconcile.Request) (reconcile.Resu
 	return reconcile.Result{}, nil
 }
 
+func (r *ReconcileClusterSpiffeId) createSpireEntry(reqLogger logr.Logger, instance *spiffeidv1alpha1.ClusterSpiffeId) (string, error) {
 
-
-func (r *ReconcileSpiffeId) createSpireEntry(reqLogger logr.Logger, instance *spiffeidv1alpha1.SpiffeId) (string, error) {
 	// TODO: sanitize!
 	selectors := make([]*common.Selector, 0, len(instance.Spec.Selector.PodLabel))
 	for k, v := range instance.Spec.Selector.PodLabel {
@@ -143,14 +140,16 @@ func (r *ReconcileSpiffeId) createSpireEntry(reqLogger logr.Logger, instance *sp
 	if len(instance.Spec.Selector.PodName) > 0 {
 		selectors = append(selectors, &common.Selector{Value: fmt.Sprintf("k8s:pod-name:%s", instance.Spec.Selector.PodName)})
 	}
+	if len(instance.Spec.Selector.Namespace) > 0 {
+		selectors = append(selectors, &common.Selector{Value: fmt.Sprintf("k8s:ns:%s", instance.Spec.Selector.Namespace)})
+	}
 	if len(instance.Spec.Selector.ServiceAccount) > 0 {
 		selectors = append(selectors, &common.Selector{Value: fmt.Sprintf("k8s:sa:%s", instance.Spec.Selector.ServiceAccount)})
 	}
-	selectors = append(selectors, &common.Selector{Value: fmt.Sprintf("k8s:ns:%s", instance.GetNamespace())})
+	for _, v := range instance.Spec.Selector.Arbitrary {
+		// TODO: Protect with some flag because this seems like it could be a really bad idea...
+		selectors = append(selectors, &common.Selector{Value: v})
+	}
 
 	return r.utils.GetOrCreateEntry(reqLogger, instance.Spec.SpiffeId, selectors)
-}
-
-func (r *ReconcileSpiffeId) finalizeSpiffeId(reqLogger logr.Logger, instance *spiffeidv1alpha1.SpiffeId) error {
-	return r.utils.DeleteEntry(reqLogger, instance.Status.EntryId)
 }
