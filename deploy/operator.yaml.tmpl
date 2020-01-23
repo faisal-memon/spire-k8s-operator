@@ -16,7 +16,7 @@ spec:
       containers:
         - name: spire-k8s-operator
           # Replace this with the built image name
-          image: docker.tw.ee/spire-k8s-operator:v0.0.1
+          image: $(DOCKER_REGISTRY)/spire-k8s-operator:latest
           command:
           - spire-k8s-operator
           imagePullPolicy: Always
