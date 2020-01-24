@@ -110,4 +110,5 @@ type SpiffeIdList struct {
 
 func init() {
 	SchemeBuilder.Register(&ClusterSpiffeId{}, &ClusterSpiffeIdList{})
+	SchemeBuilder.Register(&SpiffeId{}, &SpiffeIdList{})
 }
